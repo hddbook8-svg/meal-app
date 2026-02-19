@@ -1,6 +1,6 @@
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
@@ -20,6 +20,10 @@ export default function App() {
   const [profile, setProfile] = useState(null);
   const [meals, setMeals] = useState([]);
   const [previewImage, setPreviewImage] = useState(null);
+  // ⭐ CAMERA STATE
+const [stream, setStream] = useState(null);
+const [activeType, setActiveType] = useState(null);
+const videoRef = useRef(null);
 
   useEffect(() => {
     init();
@@ -49,6 +53,48 @@ export default function App() {
     }
   }
 
+  async function takePhoto() {
+  const video = videoRef.current;
+  const canvas = document.createElement("canvas");
+
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+
+  canvas.getContext("2d").drawImage(video, 0, 0);
+
+  canvas.toBlob(async (blob) => {
+    await uploadMeal(activeType, blob);
+    closeCamera();
+  }, "image/jpeg");
+}
+
+function closeCamera() {
+  stream?.getTracks().forEach((t) => t.stop());
+  setStream(null);
+  setActiveType(null);
+}
+
+
+
+
+  async function openCamera(type) {
+  try {
+    const s = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "environment" },
+    });
+
+    setStream(s);
+    setActiveType(type);
+
+    setTimeout(() => {
+      if (videoRef.current) {
+        videoRef.current.srcObject = s;
+      }
+    }, 100);
+  } catch (e) {
+    alert("Không mở được camera");
+  }
+}
   async function loadMeals(uid) {
     const today = getToday();
     const { data } = await supabase
@@ -143,20 +189,20 @@ export default function App() {
               <span>{done ? "✅" : "❌"}</span>
             </div>
 
-            <input
-              type="file"
-              accept="image/*"
-              capture="environment"
-              onChange={(e) =>
-                uploadMeal(type, e.target.files[0])
-              }
-              style={{
-                width: "100%",
-                padding: 10,
-                borderRadius: 8,
-                border: "1px solid #ccc",
-              }}
-            />
+            <button
+  onClick={() => openCamera(type)}
+  style={{
+    width: "100%",
+    padding: 14,
+    borderRadius: 10,
+    border: "none",
+    background: "#4a90e2",
+    color: "white",
+    fontWeight: 600,
+  }}
+>
+  📷 Chụp ảnh
+</button>
 
             {/* PATCH: HISTORY THUMBNAIL */}
             {done && (
@@ -210,6 +256,68 @@ export default function App() {
           />
         </div>
       )}
+
+{/* ⭐ CAMERA MODAL */}
+{stream && (
+  <div
+    style={{
+      position: "fixed",
+      inset: 0,
+      background: "black",
+      zIndex: 999,
+      display: "flex",
+      flexDirection: "column",
+    }}
+  >
+    {/* VIDEO PREVIEW */}
+    <video
+      ref={videoRef}
+      autoPlay
+      playsInline
+      style={{
+        flex: 1,
+        objectFit: "cover",
+      }}
+    />
+
+    {/* CONTROL BUTTON */}
+    <div
+      style={{
+        padding: 20,
+        display: "flex",
+        gap: 10,
+      }}
+    >
+      <button
+        onClick={takePhoto}
+        style={{
+          flex: 1,
+          padding: 15,
+          background: "#4caf50",
+          color: "white",
+          border: "none",
+          borderRadius: 10,
+        }}
+      >
+        Chụp
+      </button>
+
+      <button
+        onClick={closeCamera}
+        style={{
+          flex: 1,
+          padding: 15,
+          background: "#e53935",
+          color: "white",
+          border: "none",
+          borderRadius: 10,
+        }}
+      >
+        Hủy
+      </button>
+    </div>
+  </div>
+)}
 
       <button
         onClick={logout}
