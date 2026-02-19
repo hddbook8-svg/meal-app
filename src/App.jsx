@@ -600,9 +600,19 @@ data.forEach((row, i) => {
       />
 
       {/* ✅ LABEL TRƯA / TỐI */}
-      <div style={{ marginTop: 4 }}>
-        {m.meal_type === "lunch" ? "Trưa" : "Tối"}
-      </div>
+      <div
+  style={{
+    marginTop: 4,
+    lineHeight: 1.2,
+    textAlign: "center",   // ⭐ thêm dòng này
+    fontSize: 12,
+  }}
+>
+  <div style={{ color: "#666" }}>{m.date}</div>
+  <div style={{ fontWeight: 600 }}>
+    {m.meal_type === "lunch" ? "Trưa" : "Tối"}
+  </div>
+</div>
     </div>
   ))}
 </div>
