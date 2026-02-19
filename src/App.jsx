@@ -331,6 +331,8 @@ function CoachDashboard({ profile, logout }) {
   const [users, setUsers] = useState([]);
   const [reports, setReports] = useState([]);
   const [selectedDate, setSelectedDate] = useState(getToday());
+  const [fromDate, setFromDate] = useState(getToday());
+  const [toDate, setToDate] = useState(getToday());
   const [previewImage, setPreviewImage] = useState(null); // ✅ chỉ 1 cái
   const [newName, setNewName] = useState("");
   const [newEmail, setNewEmail] = useState("");
@@ -350,8 +352,8 @@ const fieldStyle = {
   }, []);
 
   useEffect(() => {
-    loadReports(selectedDate);
-  }, [selectedDate]);
+  loadReports();
+}, [fromDate, toDate]);
 
   async function loadUsers() {
     const { data } = await supabase
@@ -401,13 +403,15 @@ async function createUser() {
   }
 }    
 
-  async function loadReports(date) {
-    const { data } = await supabase
-      .from("meals")
-      .select("*")
-      .eq("date", date);
-    setReports(data || []);
-  }
+  async function loadReports() {
+  const { data } = await supabase
+    .from("meals")
+    .select("*")
+    .gte("date", fromDate)
+    .lte("date", toDate);
+
+  setReports(data || []);
+}
 
   // ✅ FIX: getPublicUrl chuẩn
   function getPublicUrl(path) {
@@ -425,9 +429,18 @@ async function createUser() {
       Ngày: r.date,
       Bữa: r.meal_type === "lunch" ? "Trưa" : "Tối",
       Trễ: r.is_late ? "Có" : "Không",
+      Ảnh: getPublicUrl(r.image_url), // ⭐ ADD
     }));
 
     const ws = XLSX.utils.json_to_sheet(data);
+    // ⭐ MAKE IMAGE COLUMN CLICKABLE
+data.forEach((row, i) => {
+  const cell = ws[`F${i + 2}`]; // cột F
+  if (cell) {
+    cell.l = { Target: row.Ảnh };
+    cell.v = "Xem ảnh";
+  }
+});
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Báo cáo");
 
@@ -508,12 +521,22 @@ async function createUser() {
         <span>Chưa đủ: {users.length - fullSubmitted}</span>
       </div>
 
-      <input
-        type="date"
-        value={selectedDate}
-        onChange={(e) => setSelectedDate(e.target.value)}
-        style={{ width: "100%", marginBottom: 15 }}
-      />
+      {/* ⭐ DATE RANGE */}
+<div style={{ display: "flex", gap: 10, marginBottom: 15, flexWrap: "wrap" }}>
+  <input
+    type="date"
+    value={fromDate}
+    onChange={(e) => setFromDate(e.target.value)}
+    style={{ flex: 1, padding: 10, borderRadius: 8, border: "1px solid #ddd" }}
+  />
+
+  <input
+    type="date"
+    value={toDate}
+    onChange={(e) => setToDate(e.target.value)}
+    style={{ flex: 1, padding: 10, borderRadius: 8, border: "1px solid #ddd" }}
+  />
+</div>
 
       <button onClick={exportExcel}>📈 Xuất Excel</button>
 
